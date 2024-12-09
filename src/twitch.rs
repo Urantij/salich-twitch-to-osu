@@ -1,4 +1,4 @@
-use crate::map::OsuMapSet;
+use crate::map::{OsuMap, OsuMapSet};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
@@ -9,7 +9,8 @@ use twitch_irc::{ClientConfig, SecureTCPTransport, TwitchIRCClient};
 pub struct OsuRelatedTwitchMessage {
     pub sender: String,
     pub message: String,
-    pub maps: Vec<OsuMapSet>,
+    pub sets: Vec<OsuMapSet>,
+    pub maps: Vec<OsuMap>,
 }
 
 pub struct TwitchWithOsu {
@@ -67,10 +68,17 @@ impl TwitchWithOsu {
                 continue;
             };
 
-            let maps: Vec<OsuMapSet> = msg
+            let sets: Vec<OsuMapSet> = msg
                 .message_text
                 .split(" ")
                 .map(|word| OsuMapSet::try_parse(word))
+                .filter_map(|map| map)
+                .collect();
+
+            let maps: Vec<OsuMap> = msg
+                .message_text
+                .split(" ")
+                .map(|word| OsuMap::try_parse(word))
                 .filter_map(|map| map)
                 .collect();
 
@@ -78,6 +86,7 @@ impl TwitchWithOsu {
                 .send(OsuRelatedTwitchMessage {
                     sender: msg.sender.name,
                     message: msg.message_text,
+                    sets,
                     maps,
                 })
                 .ok();

@@ -1,24 +1,43 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-static MAP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+static MAP_SET_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"^https://osu.ppy.sh/beatmapsets/(?<set_id>\d+)(#(?<game_mode>\w+)/(?<map_id>\d+))?",
     )
     .unwrap()
 });
 
+static MAP_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^https://osu.ppy.sh/beatmaps/(?<map_id>\d+)").unwrap());
+
 #[cfg(test)]
 mod test;
 
 pub struct OsuMap {
+    pub id: u64,
+}
+
+impl OsuMap {
+    pub fn try_parse(content: &str) -> Option<OsuMap> {
+        let Some(caps) = MAP_REGEX.captures(content) else {
+            return None;
+        };
+
+        let id: u64 = caps["map_id"].parse().unwrap();
+
+        Some(OsuMap { id })
+    }
+}
+
+pub struct OsuInSetMap {
     pub game_mode: String,
     pub id: u64,
 }
 
 pub struct OsuMapSet {
     pub set_id: u64,
-    pub map: Option<OsuMap>,
+    pub map: Option<OsuInSetMap>,
 }
 
 impl OsuMapSet {
@@ -34,7 +53,7 @@ impl OsuMapSet {
     }
 
     pub fn try_parse(content: &str) -> Option<OsuMapSet> {
-        let Some(caps) = MAP_REGEX.captures(content) else {
+        let Some(caps) = MAP_SET_REGEX.captures(content) else {
             return None;
         };
 
@@ -45,7 +64,7 @@ impl OsuMapSet {
                 let id = m.as_str().parse().unwrap();
                 let game_mode: String = caps.name("game_mode").unwrap().as_str().to_owned();
 
-                Some(OsuMap { id, game_mode })
+                Some(OsuInSetMap { id, game_mode })
             }
             _ => None,
         };

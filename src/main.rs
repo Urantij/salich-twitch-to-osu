@@ -41,7 +41,7 @@ async fn process_maps(
     mut incoming_messages: UnboundedReceiver<OsuRelatedTwitchMessage>,
 ) {
     while let Some(msg) = incoming_messages.recv().await {
-        if msg.maps.len() == 0 {
+        if msg.sets.len() == 0 && msg.maps.len() == 0 {
             continue;
         }
 
